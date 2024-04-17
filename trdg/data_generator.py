@@ -1,10 +1,13 @@
 import os
 import random as rnd
+from typing import Union
 
 from PIL import Image, ImageFilter, ImageStat
+import numpy as np
 
 from trdg import computer_text_generator, background_generator, distorsion_generator
 from trdg.utils import mask_to_bboxes, make_filename_valid
+from trdg.fpdb import ForkedPdb
 
 try:
     from trdg import handwritten_text_generator
@@ -18,7 +21,6 @@ class FakeTextDataGenerator(object):
         """
         Same as generate, but takes all parameters as one tuple
         """
-
         cls.generate(*t)
 
     @classmethod
@@ -26,7 +28,7 @@ class FakeTextDataGenerator(object):
         cls,
         index: int,
         text: str,
-        font: str,
+        font: Union[str, list],
         out_dir: str,
         size: int,
         extension: str,
@@ -46,42 +48,57 @@ class FakeTextDataGenerator(object):
         space_width: int,
         character_spacing: int,
         margins: int,
+        random_margins: True,
         fit: bool,
         output_mask: bool,
         word_split: bool,
         image_dir: str,
         stroke_width: int = 0,
         stroke_fill: str = "#282828",
+        random_stroke: bool = True,
         image_mode: str = "RGB",
         output_bboxes: int = 0,
     ) -> Image:
         image = None
+        if isinstance(font, list):
+            font = rnd.choice(font)
 
         margin_top, margin_left, margin_bottom, margin_right = margins
+        if random_margins:
+            margin_top, margin_bottom = rnd.randint(0, margin_top), rnd.randint(0, margin_bottom)
+            margin_left, margin_right = rnd.randint(0, margin_left), rnd.randint(0, margin_right)
         horizontal_margin = margin_left + margin_right
         vertical_margin = margin_top + margin_bottom
 
         ##########################
         # Create picture of text #
         ##########################
+        if random_stroke:
+           stroke_width = rnd.randint(0, stroke_width)
         if is_handwritten:
             if orientation == 1:
                 raise ValueError("Vertical handwritten text is unavailable")
             image, mask = handwritten_text_generator.generate(text, text_color)
         else:
-            image, mask = computer_text_generator.generate(
-                text,
-                font,
-                text_color,
-                size,
-                orientation,
-                space_width,
-                character_spacing,
-                fit,
-                word_split,
-                stroke_width,
-                stroke_fill,
-            )
+            max_trials = 10
+            for trial in range(max_trials):
+                image, mask = computer_text_generator.generate(
+                    text,
+                    font,
+                    text_color,
+                    size,
+                    orientation,
+                    space_width,
+                    character_spacing,
+                    fit,
+                    word_split,
+                    stroke_width,
+                    stroke_fill,
+                )
+                if np.any(np.array(image)[:, :, :-1]): break
+                elif trial == max_trials-1:
+                    raise Exception(f"Max Trials reached for non-blank text generation with font {font.split('/')[-2]}/{font.split('/')[-1]}")
+
         random_angle = rnd.randint(0 - skewing_angle, skewing_angle)
 
         rotated_img = image.rotate(
@@ -95,6 +112,9 @@ class FakeTextDataGenerator(object):
         #############################
         # Apply distortion to image #
         #############################
+        if distorsion_type == 4:
+           distorsion_type = rnd.randint(0,3)
+
         if distorsion_type == 0:
             distorted_img = rotated_img  # Mind = blown
             distorted_mask = rotated_mask
@@ -123,7 +143,6 @@ class FakeTextDataGenerator(object):
         ##################################
         # Resize image to desired format #
         ##################################
-
         # Horizontal text
         if orientation == 0:
             new_width = int(
@@ -158,49 +177,60 @@ class FakeTextDataGenerator(object):
         #############################
         # Generate background image #
         #############################
-        if background_type == 0:
-            background_img = background_generator.gaussian_noise(
-                background_height, background_width
+        def generate_background_image():
+            if background_type == 0:
+                background_img = background_generator.gaussian_noise(
+                    background_height, background_width
+                )
+            elif background_type == 1:
+                background_img = background_generator.plain_white(
+                    background_height, background_width
+                )
+            elif background_type == 2:
+                background_img = background_generator.quasicrystal(
+                    background_height, background_width
+                )
+            else:
+                background_img = background_generator.image(
+                    background_height, background_width, image_dir
+                )
+            background_mask = Image.new(
+                "RGB", (background_width, background_height), (0, 0, 0)
             )
-        elif background_type == 1:
-            background_img = background_generator.plain_white(
-                background_height, background_width
-            )
-        elif background_type == 2:
-            background_img = background_generator.quasicrystal(
-                background_height, background_width
-            )
-        else:
-            background_img = background_generator.image(
-                background_height, background_width, image_dir
-            )
-        background_mask = Image.new(
-            "RGB", (background_width, background_height), (0, 0, 0)
-        )
+            return background_img, background_mask
 
-        ##############################################################
-        # Comparing average pixel value of text and background image #
-        ##############################################################
-        try:
-            resized_img_st = ImageStat.Stat(resized_img, resized_mask.split()[2])
-            background_img_st = ImageStat.Stat(background_img)
+        max_trials = 500
+        resized_img_st = ImageStat.Stat(resized_img, resized_mask.split()[2])
+        resized_img_px_mean = sum(resized_img_st.mean[:2]) / 3
+        for t in range(0, max_trials):
+            background_img, background_mask = generate_background_image()
 
-            resized_img_px_mean = sum(resized_img_st.mean[:2]) / 3
-            background_img_px_mean = sum(background_img_st.mean) / 3
+            ##############################################################
+            # Comparing average pixel value of text and background image #
+            ##############################################################
+            #ForkedPdb().set_trace()
+            try:
+                background_img_st = ImageStat.Stat(background_img)
+                background_img_px_mean = sum(background_img_st.mean) / 3
+                background_img_px_var = sum(background_img_st.var) / 3
 
-            if abs(resized_img_px_mean - background_img_px_mean) < 15:
-                print("value of mean pixel is too similar. Ignore this image")
-
-                print("resized_img_st \n {}".format(resized_img_st.mean))
-                print("background_img_st \n {}".format(background_img_st.mean))
-
-                return
-        except Exception as err:
-            return
+                if abs(resized_img_px_mean - background_img_px_mean) < 45:
+                    #print("resized_img_st {}".format(resized_img_st.mean))
+                    #print("background_img_st {}".format(background_img_st.mean))
+                    raise Exception("value of mean pixel is too similar. Ignore this image")
+                if background_img_px_var > 1000:
+                    raise Exception("image variance too big. Ignore this image")
+            except Exception as err:
+                #print(err)
+                if t == max_trials-1: raise Exception("Max trial reached")
+            else:
+                break
 
         #############################
         # Place text with alignment #
         #############################
+        if alignment == 3:
+            alignment = rnd.randint(0, 2)
 
         new_text_width, _ = resized_img.size
 
@@ -252,7 +282,7 @@ class FakeTextDataGenerator(object):
         if space_width == 0:
             text = text.replace(" ", "")
         if name_format == 0:
-            name = "{}_{}".format(text, str(index))
+            name = "{}_{}_{}".format(text, str(index), font.split("/")[-2])
         elif name_format == 1:
             name = "{}_{}".format(str(index), text)
         elif name_format == 2:

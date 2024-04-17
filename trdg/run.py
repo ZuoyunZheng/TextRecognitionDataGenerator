@@ -208,7 +208,7 @@ def parse_arguments():
         "--distorsion",
         type=int,
         nargs="?",
-        help="Define a distortion applied to the resulting image. 0: None (Default), 1: Sine wave, 2: Cosine wave, 3: Random",
+        help="Define a distortion applied to the resulting image. 0: None (Default), 1: Sine wave, 2: Cosine wave, 3: Random, 4: Random distortion type from 0-3",
         default=0,
     )
     parser.add_argument(
@@ -232,7 +232,7 @@ def parse_arguments():
         "--alignment",
         type=int,
         nargs="?",
-        help="Define the alignment of the text in the image. Only used if the width parameter is set. 0: left, 1: center, 2: right",
+        help="Define the alignment of the text in the image. Only used if the width parameter is set. 0: left, 1: center, 2: right, 3: random",
         default=1,
     )
     parser.add_argument(
@@ -274,6 +274,14 @@ def parse_arguments():
         nargs="?",
         help="Define the margins around the text when rendered. In pixels",
         default=(5, 5, 5, 5),
+    )
+    parser.add_argument(
+        "-rm",
+        "--random_margins",
+        type=bool,
+        nargs="?",
+        help="Define whether the margins around the text should be randomized",
+        default=True,
     )
     parser.add_argument(
         "-fi",
@@ -334,6 +342,13 @@ def parse_arguments():
         default="#282828",
     )
     parser.add_argument(
+        "-rst",
+        "--random_stroke",
+        action="store_true",
+        help="Use random stroke width and stroke fill",
+        default=False,
+    )
+    parser.add_argument(
         "-im",
         "--image_mode",
         type=str,
@@ -374,11 +389,17 @@ def main():
 
     # Create font (path) list
     if args.font_dir:
+        #fonts = [
+        #    os.path.join(args.font_dir, p)
+        #    for p in os.listdir(args.font_dir)
+        #    if os.path.splitext(p)[1] == ".ttf"
+        #]
+        from pathlib import Path
         fonts = [
-            os.path.join(args.font_dir, p)
-            for p in os.listdir(args.font_dir)
-            if os.path.splitext(p)[1] == ".ttf"
+            [str(ttf_f) for ttf_f in f.glob("*.ttf")]
+            for f in Path(args.font_dir).iterdir()
         ]
+        fonts = [f for f in fonts if f]
     elif args.font:
         if os.path.isfile(args.font):
             fonts = [args.font]
@@ -404,6 +425,8 @@ def main():
             args.include_symbols,
             args.language,
         )
+        # include a quarter of natural language
+        #wiki_strings = (create_strings_from_wikipedia(args.length, int(args.count * 0.25), args.language))
         # Set a name format compatible with special characters automatically if they are used
         if args.include_symbols or True not in (
             args.include_letters,
@@ -461,12 +484,14 @@ def main():
                 [args.space_width] * string_count,
                 [args.character_spacing] * string_count,
                 [args.margins] * string_count,
+                [args.random_margins] * string_count,
                 [args.fit] * string_count,
                 [args.output_mask] * string_count,
                 [args.word_split] * string_count,
                 [args.image_dir] * string_count,
                 [args.stroke_width] * string_count,
                 [args.stroke_fill] * string_count,
+                [args.random_stroke] * string_count,
                 [args.image_mode] * string_count,
                 [args.output_bboxes] * string_count,
             ),
