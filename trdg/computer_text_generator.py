@@ -170,8 +170,8 @@ def _generate_horizontal_text(
     pts_src = np.array([
         [0,0],[txt_img.shape[1]-1, 0],
         [0, txt_img.shape[0]-1], [txt_img.shape[1]-1, txt_img.shape[0]-1]
-    ])n
-    rnd_port = [int(0.05*s) for s in txt_img.shape[:2]]
+    ])
+    rnd_port = [int(0.1*s) for s in txt_img.shape[:2]]
     pts_dst = pts_src + np.array([
         [ rnd.randint(0, rnd_port[1]),  rnd.randint(0, rnd_port[0])],
         [-rnd.randint(0, rnd_port[1]),  rnd.randint(0, rnd_port[0])],

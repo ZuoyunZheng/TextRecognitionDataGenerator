@@ -113,7 +113,7 @@ class FakeTextDataGenerator(object):
         # Apply distortion to image #
         #############################
         if distorsion_type == 4:
-           distorsion_type = rnd.randint(0,3)
+           distorsion_type = rnd.randint(0,2)
 
         if distorsion_type == 0:
             distorted_img = rotated_img  # Mind = blown
@@ -286,7 +286,7 @@ class FakeTextDataGenerator(object):
         elif name_format == 1:
             name = "{}_{}".format(str(index), text)
         elif name_format == 2:
-            name = str(index)
+            name = "{}_{}".format(str(index), font.split("/")[-2])
         else:
             print("{} is not a valid name format. Using default.".format(name_format))
             name = "{}_{}".format(text, str(index))
