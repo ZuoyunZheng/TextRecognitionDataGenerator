@@ -107,7 +107,7 @@ def sin(
     Apply a sine distortion on one or both of the specified axis
     """
 
-    max_offset = int(image.height**0.5)
+    max_offset = int(image.height**0.2)
 
     return _apply_func_distorsion(
         image,
@@ -126,7 +126,7 @@ def cos(
     Apply a cosine distortion on one or both of the specified axis
     """
 
-    max_offset = int(image.height**0.5)
+    max_offset = int(image.height**0.2)
 
     return _apply_func_distorsion(
         image,

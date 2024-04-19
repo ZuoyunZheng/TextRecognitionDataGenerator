@@ -199,9 +199,18 @@ class FakeTextDataGenerator(object):
             )
             return background_img, background_mask
 
+        def calculate_log(image):
+            import cv2
+            image_cv2 = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+            image_cv2 = cv2.GaussianBlur(image_cv2, (3,3), 0)
+            image_cv2 = cv2.cvtColor(image_cv2, cv2.COLOR_RGB2GRAY)
+            image_cv2 = cv2.Laplacian(image_cv2, cv2.CV_16S, ksize=3)
+            #ForkedPdb().set_trace()
+            return np.mean(image_cv2.std())
+
         max_trials = 500
-        resized_img_st = ImageStat.Stat(resized_img, resized_mask.split()[2])
-        resized_img_px_mean = sum(resized_img_st.mean[:2]) / 3
+        resized_img_st = ImageStat.Stat(resized_img.convert("L"), resized_mask.split()[2])
+        resized_img_px_mean = sum(resized_img_st.mean)
         for t in range(0, max_trials):
             background_img, background_mask = generate_background_image()
 
@@ -210,16 +219,19 @@ class FakeTextDataGenerator(object):
             ##############################################################
             #ForkedPdb().set_trace()
             try:
-                background_img_st = ImageStat.Stat(background_img)
-                background_img_px_mean = sum(background_img_st.mean) / 3
-                background_img_px_var = sum(background_img_st.var) / 3
+                background_img_st = ImageStat.Stat(background_img.convert("L"))
+                background_img_px_mean = sum(background_img_st.mean)
+                background_img_px_var = sum(background_img_st.var)
+                background_img_log = calculate_log(background_img)
 
                 if abs(resized_img_px_mean - background_img_px_mean) < 45:
                     #print("resized_img_st {}".format(resized_img_st.mean))
                     #print("background_img_st {}".format(background_img_st.mean))
-                    raise Exception("value of mean pixel is too similar. Ignore this image")
+                    raise Exception("Value of mean pixel is too similar. Ignore this image")
+                if background_img_log > 10 + abs(rnd.gauss(0, 5)):
+                    raise Exception("Texture too rough. Ignore this image")
                 if background_img_px_var > 1000:
-                    raise Exception("image variance too big. Ignore this image")
+                    raise Exception("Variance too big. Ignore this image")
             except Exception as err:
                 #print(err)
                 if t == max_trials-1: raise Exception("Max trial reached")
