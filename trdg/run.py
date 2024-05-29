@@ -383,8 +383,9 @@ def main():
     """
 
     # Fix seeding
+    # cf. https://github.com/clovaai/synthtiger/blob/master/synthtiger/gen.py#L76
     rnd.seed(0)
-    np.random.seed(0)
+    np.random.set_state(np.random.RandomState(np.random.MT19937(0)).get_state())
 
     # Argument parsing
     args = parse_arguments()

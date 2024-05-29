@@ -60,9 +60,9 @@ class FakeTextDataGenerator(object):
         output_bboxes: int = 0,
     ) -> Image:
 
-        # Fix seeding
+        # Fix seeding for subprocesses
         rnd.seed(index)
-        np.random.seed(index)
+        np.random.set_state(np.random.RandomState(np.random.MT19937(0)).get_state())
 
         image = None
         if isinstance(font, list):
