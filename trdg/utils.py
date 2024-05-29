@@ -80,14 +80,19 @@ def mask_to_bboxes(mask: List[Tuple[int, int, int, int]], tess: bool = False):
             bboxes.append(
                 (
                     max(0, np.min(letter[1]) - 1),
-                    max(0, np.min(letter[0]) - 1)
-                    if not tess
-                    else max(0, mask_arr.shape[0] - np.max(letter[0]) - 1),
+                    (
+                        max(0, np.min(letter[0]) - 1)
+                        if not tess
+                        else max(0, mask_arr.shape[0] - np.max(letter[0]) - 1)
+                    ),
                     min(mask_arr.shape[1] - 1, np.max(letter[1]) + 1),
-                    min(mask_arr.shape[0] - 1, np.max(letter[0]) + 1)
-                    if not tess
-                    else min(
-                        mask_arr.shape[0] - 1, mask_arr.shape[0] - np.min(letter[0]) + 1
+                    (
+                        min(mask_arr.shape[0] - 1, np.max(letter[0]) + 1)
+                        if not tess
+                        else min(
+                            mask_arr.shape[0] - 1,
+                            mask_arr.shape[0] - np.min(letter[0]) + 1,
+                        )
                     ),
                 )
             )

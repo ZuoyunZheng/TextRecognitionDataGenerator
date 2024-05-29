@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 
 from trdg.utils import get_text_width, get_text_height
+from trdg.fpdb import ForkedPdb
 
 # Thai Unicode reference: https://jrgraphix.net/r/Unicode/0E00-0E7F
 TH_TONE_MARKS = [
@@ -104,7 +105,9 @@ def _generate_horizontal_text(
     ]
     text_width = sum(piece_widths)
     # list of spacing TRAILING each character
-    character_spacing = [rnd.randint(0, character_spacing) for _ in range((len(text)-1))] + [0]
+    character_spacing = [
+        rnd.randint(0, character_spacing) for _ in range((len(text) - 1))
+    ] + [0]
     if not word_split:
         text_width += sum(character_spacing)
 
@@ -139,7 +142,11 @@ def _generate_horizontal_text(
         while True:
             try:
                 txt_img_draw.text(
-                    (sum(piece_widths[0:i]) + sum(character_spacing[:i]) * int(not word_split), 0),
+                    (
+                        sum(piece_widths[0:i])
+                        + sum(character_spacing[:i]) * int(not word_split),
+                        0,
+                    ),
                     p,
                     fill=fill,
                     font=image_font,
@@ -147,7 +154,11 @@ def _generate_horizontal_text(
                     stroke_fill=stroke_fill,
                 )
                 txt_mask_draw.text(
-                    (sum(piece_widths[0:i]) + sum(character_spacing[:i]) * int(not word_split), 0),
+                    (
+                        sum(piece_widths[0:i])
+                        + sum(character_spacing[:i]) * int(not word_split),
+                        0,
+                    ),
                     p,
                     fill=((i + 1) // (255 * 255), (i + 1) // 255, (i + 1) % 255),
                     font=image_font,
@@ -157,7 +168,9 @@ def _generate_horizontal_text(
             except OSError as e:
                 if stroke_width <= 0:
                     print(e)
-                    raise Exception(f"stroke_width already {stoke_width}, but still OSError")
+                    raise Exception(
+                        f"stroke_width already {stoke_width}, but still OSError"
+                    )
                 stroke_width -= 1
                 print(e, f" reducing stroke_width to {stroke_width}")
             else:
@@ -167,17 +180,23 @@ def _generate_horizontal_text(
     txt_img = cv2.cvtColor(np.array(txt_img), cv2.COLOR_RGBA2BGRA)
     txt_mask = cv2.cvtColor(np.array(txt_mask), cv2.COLOR_RGB2BGR)
     # 4 corner point from source: top left, bottom left, top right, bottom right
-    pts_src = np.array([
-        [0,0],[txt_img.shape[1]-1, 0],
-        [0, txt_img.shape[0]-1], [txt_img.shape[1]-1, txt_img.shape[0]-1]
-    ])
-    rnd_port = [int(0.1*s) for s in txt_img.shape[:2]]
-    pts_dst = pts_src + np.array([
-        [ rnd.randint(0, rnd_port[1]),  rnd.randint(0, rnd_port[0])],
-        [-rnd.randint(0, rnd_port[1]),  rnd.randint(0, rnd_port[0])],
-        [ rnd.randint(0, rnd_port[1]), -rnd.randint(0, rnd_port[0])],
-        [-rnd.randint(0, rnd_port[1]), -rnd.randint(0, rnd_port[0])],
-    ])
+    pts_src = np.array(
+        [
+            [0, 0],
+            [txt_img.shape[1] - 1, 0],
+            [0, txt_img.shape[0] - 1],
+            [txt_img.shape[1] - 1, txt_img.shape[0] - 1],
+        ]
+    )
+    rnd_port = [int(0.1 * s) for s in txt_img.shape[:2]]
+    pts_dst = pts_src + np.array(
+        [
+            [rnd.randint(0, rnd_port[1]), rnd.randint(0, rnd_port[0])],
+            [-rnd.randint(0, rnd_port[1]), rnd.randint(0, rnd_port[0])],
+            [rnd.randint(0, rnd_port[1]), -rnd.randint(0, rnd_port[0])],
+            [-rnd.randint(0, rnd_port[1]), -rnd.randint(0, rnd_port[0])],
+        ]
+    )
     h, _ = cv2.findHomography(pts_src, pts_dst)
     dst_size = np.amax(pts_dst, axis=0)
     txt_img = cv2.warpPerspective(txt_img, h, (dst_size[0], dst_size[1]))

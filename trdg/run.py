@@ -12,6 +12,8 @@ from multiprocessing import Pool
 
 from tqdm import tqdm
 
+import numpy as np
+
 from trdg.data_generator import FakeTextDataGenerator
 from trdg.string_generator import (
     create_strings_from_dict,
@@ -70,6 +72,22 @@ def parse_arguments():
         action="store_true",
         help="Use random sequences as the source text for the generation. Set '-let','-num','-sym' to use letters/numbers/symbols. If none specified, using all three.",
         default=False,
+    )
+    parser.add_argument(
+        "-rsm",
+        "--rs_mean",
+        type=float,
+        nargs="?",
+        help="Mean of sequence length for random sequences",
+        default=8.0,
+    )
+    parser.add_argument(
+        "-rss",
+        "--rs_std",
+        type=float,
+        nargs="?",
+        help="Standard deviation of sequence length for random sequences",
+        default=2.5,
     )
     parser.add_argument(
         "-let",
@@ -364,6 +382,10 @@ def main():
     Description: Main function
     """
 
+    # Fix seeding
+    rnd.seed(0)
+    np.random.seed(0)
+
     # Argument parsing
     args = parse_arguments()
 
@@ -389,12 +411,13 @@ def main():
 
     # Create font (path) list
     if args.font_dir:
-        #fonts = [
+        # fonts = [
         #    os.path.join(args.font_dir, p)
         #    for p in os.listdir(args.font_dir)
         #    if os.path.splitext(p)[1] == ".ttf"
-        #]
+        # ]
         from pathlib import Path
+
         fonts = [
             [str(ttf_f) for ttf_f in f.glob("*.ttf")]
             for f in Path(args.font_dir).iterdir()
@@ -424,9 +447,11 @@ def main():
             args.include_numbers,
             args.include_symbols,
             args.language,
+            args.rs_mean,
+            args.rs_std,
         )
         # include a quarter of natural language
-        #wiki_strings = (create_strings_from_wikipedia(args.length, int(args.count * 0.25), args.language))
+        # wiki_strings = (create_strings_from_wikipedia(args.length, int(args.count * 0.25), args.language))
         # Set a name format compatible with special characters automatically if they are used
         if args.include_symbols or True not in (
             args.include_letters,

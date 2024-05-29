@@ -59,14 +59,23 @@ class FakeTextDataGenerator(object):
         image_mode: str = "RGB",
         output_bboxes: int = 0,
     ) -> Image:
+
+        # Fix seeding
+        rnd.seed(index)
+        np.random.seed(index)
+
         image = None
         if isinstance(font, list):
             font = rnd.choice(font)
 
         margin_top, margin_left, margin_bottom, margin_right = margins
         if random_margins:
-            margin_top, margin_bottom = rnd.randint(0, margin_top), rnd.randint(0, margin_bottom)
-            margin_left, margin_right = rnd.randint(0, margin_left), rnd.randint(0, margin_right)
+            margin_top, margin_bottom = rnd.randint(0, margin_top), rnd.randint(
+                0, margin_bottom
+            )
+            margin_left, margin_right = rnd.randint(0, margin_left), rnd.randint(
+                0, margin_right
+            )
         horizontal_margin = margin_left + margin_right
         vertical_margin = margin_top + margin_bottom
 
@@ -74,7 +83,7 @@ class FakeTextDataGenerator(object):
         # Create picture of text #
         ##########################
         if random_stroke:
-           stroke_width = rnd.randint(0, stroke_width)
+            stroke_width = rnd.randint(0, stroke_width)
         if is_handwritten:
             if orientation == 1:
                 raise ValueError("Vertical handwritten text is unavailable")
@@ -95,9 +104,12 @@ class FakeTextDataGenerator(object):
                     stroke_width,
                     stroke_fill,
                 )
-                if np.any(np.array(image)[:, :, :-1]): break
-                elif trial == max_trials-1:
-                    raise Exception(f"Max Trials reached for non-blank text generation with font {font.split('/')[-2]}/{font.split('/')[-1]}")
+                if np.any(np.array(image)[:, :, :-1]):
+                    break
+                elif trial == max_trials - 1:
+                    raise Exception(
+                        f"Max Trials reached for non-blank text generation with font {font.split('/')[-2]}/{font.split('/')[-1]}"
+                    )
 
         random_angle = rnd.randint(0 - skewing_angle, skewing_angle)
 
@@ -113,7 +125,7 @@ class FakeTextDataGenerator(object):
         # Apply distortion to image #
         #############################
         if distorsion_type == 4:
-           distorsion_type = rnd.randint(0,2)
+            distorsion_type = rnd.randint(0, 2)
 
         if distorsion_type == 0:
             distorted_img = rotated_img  # Mind = blown
@@ -201,15 +213,17 @@ class FakeTextDataGenerator(object):
 
         def calculate_log(image):
             import cv2
+
             image_cv2 = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-            image_cv2 = cv2.GaussianBlur(image_cv2, (3,3), 0)
+            image_cv2 = cv2.GaussianBlur(image_cv2, (3, 3), 0)
             image_cv2 = cv2.cvtColor(image_cv2, cv2.COLOR_RGB2GRAY)
             image_cv2 = cv2.Laplacian(image_cv2, cv2.CV_16S, ksize=3)
-            #ForkedPdb().set_trace()
             return np.mean(image_cv2.std())
 
         max_trials = 500
-        resized_img_st = ImageStat.Stat(resized_img.convert("L"), resized_mask.split()[2])
+        resized_img_st = ImageStat.Stat(
+            resized_img.convert("L"), resized_mask.split()[2]
+        )
         resized_img_px_mean = sum(resized_img_st.mean)
         for t in range(0, max_trials):
             background_img, background_mask = generate_background_image()
@@ -217,7 +231,6 @@ class FakeTextDataGenerator(object):
             ##############################################################
             # Comparing average pixel value of text and background image #
             ##############################################################
-            #ForkedPdb().set_trace()
             try:
                 background_img_st = ImageStat.Stat(background_img.convert("L"))
                 background_img_px_mean = sum(background_img_st.mean)
@@ -225,16 +238,19 @@ class FakeTextDataGenerator(object):
                 background_img_log = calculate_log(background_img)
 
                 if abs(resized_img_px_mean - background_img_px_mean) < 45:
-                    #print("resized_img_st {}".format(resized_img_st.mean))
-                    #print("background_img_st {}".format(background_img_st.mean))
-                    raise Exception("Value of mean pixel is too similar. Ignore this image")
+                    # print("resized_img_st {}".format(resized_img_st.mean))
+                    # print("background_img_st {}".format(background_img_st.mean))
+                    raise Exception(
+                        "Value of mean pixel is too similar. Ignore this image"
+                    )
                 if background_img_log > 10 + abs(rnd.gauss(0, 5)):
                     raise Exception("Texture too rough. Ignore this image")
                 if background_img_px_var > 1000:
                     raise Exception("Variance too big. Ignore this image")
             except Exception as err:
-                #print(err)
-                if t == max_trials-1: raise Exception("Max trial reached")
+                # print(err)
+                if t == max_trials - 1:
+                    raise Exception("Max trial reached")
             else:
                 break
 

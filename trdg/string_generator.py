@@ -80,6 +80,8 @@ def create_strings_randomly(
     num: bool,
     sym: bool,
     lang: str,
+    mean: float,
+    std: float,
 ) -> List[str]:
     """
     Create all strings by randomly sampling from a pool of characters.
@@ -127,14 +129,14 @@ def create_strings_randomly(
         max_seq_len = 2
     else:
         min_seq_len = 1
-        max_seq_len = 20
+        max_seq_len = 32
 
     strings = []
     for _ in range(0, count):
         current_string = ""
         for _ in range(0, rnd.randint(1, length) if allow_variable else length):
-            #seq_len = rnd.randint(min_seq_len, max_seq_len)
-            seq_len = max(min_seq_len, min(max_seq_len, int(rnd.gauss(10, 2.5))))
+            # seq_len = rnd.randint(min_seq_len, max_seq_len)
+            seq_len = max(min_seq_len, min(max_seq_len, int(rnd.gauss(mean, std))))
             assert min_seq_len <= seq_len and seq_len <= max_seq_len
             current_string += "".join([rnd.choice(pool) for _ in range(seq_len)])
             current_string += " "

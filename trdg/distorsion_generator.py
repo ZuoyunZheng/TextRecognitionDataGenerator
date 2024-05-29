@@ -76,19 +76,19 @@ def _apply_func_distorsion(
         row_width = img_arr.shape[1]
         for i, o in enumerate(horizontal_offsets):
             if vertical:
-                new_img_arr_copy[
-                    i, max_offset + o : row_width + max_offset + o, :
-                ] = new_img_arr[i, max_offset : row_width + max_offset, :]
-                new_mask_arr_copy[
-                    i, max_offset + o : row_width + max_offset + o, :
-                ] = new_mask_arr[i, max_offset : row_width + max_offset, :]
+                new_img_arr_copy[i, max_offset + o : row_width + max_offset + o, :] = (
+                    new_img_arr[i, max_offset : row_width + max_offset, :]
+                )
+                new_mask_arr_copy[i, max_offset + o : row_width + max_offset + o, :] = (
+                    new_mask_arr[i, max_offset : row_width + max_offset, :]
+                )
             else:
-                new_img_arr[
-                    i, max_offset + o : row_width + max_offset + o, :
-                ] = img_arr[i, :, :]
-                new_mask_arr[
-                    i, max_offset + o : row_width + max_offset + o, :
-                ] = mask_arr[i, :, :]
+                new_img_arr[i, max_offset + o : row_width + max_offset + o, :] = (
+                    img_arr[i, :, :]
+                )
+                new_mask_arr[i, max_offset + o : row_width + max_offset + o, :] = (
+                    mask_arr[i, :, :]
+                )
 
     return (
         Image.fromarray(
