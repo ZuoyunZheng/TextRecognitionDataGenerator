@@ -34,6 +34,7 @@ def generate(
     word_split: bool,
     stroke_width: int = 0,
     stroke_fill: str = "#282828",
+    erode_quant: float = 0.0,
 ) -> Tuple:
     if orientation == 0:
         return _generate_horizontal_text(
@@ -47,6 +48,7 @@ def generate(
             word_split,
             stroke_width,
             stroke_fill,
+            erode_quant,
         )
     elif orientation == 1:
         return _generate_vertical_text(
@@ -83,8 +85,9 @@ def _generate_horizontal_text(
     character_spacing: int,
     fit: bool,
     word_split: bool,
-    stroke_width: int = 0,
-    stroke_fill: str = "#282828",
+    stroke_width: int,
+    stroke_fill: str,
+    erode_quant: bool,
 ) -> Tuple:
     image_font = ImageFont.truetype(font=font, size=font_size)
 
@@ -127,6 +130,7 @@ def _generate_horizontal_text(
         rnd.randint(min(c1[0], c2[0]), max(c1[0], c2[0])),
         rnd.randint(min(c1[1], c2[1]), max(c1[1], c2[1])),
         rnd.randint(min(c1[2], c2[2]), max(c1[2], c2[2])),
+        255,
     )
 
     stroke_colors = [ImageColor.getrgb(c) for c in stroke_fill.split(",")]
@@ -136,6 +140,7 @@ def _generate_horizontal_text(
         rnd.randint(min(stroke_c1[0], stroke_c2[0]), max(stroke_c1[0], stroke_c2[0])),
         rnd.randint(min(stroke_c1[1], stroke_c2[1]), max(stroke_c1[1], stroke_c2[1])),
         rnd.randint(min(stroke_c1[2], stroke_c2[2]), max(stroke_c1[2], stroke_c2[2])),
+        255,
     )
 
     for i, p in enumerate(splitted_text):
@@ -176,6 +181,11 @@ def _generate_horizontal_text(
             else:
                 break
 
+    # zero_alpha = np.array(txt_img.getchannel("A")) == 0
+    # mask_at_zero_alpha = np.array(txt_mask)[zero_alpha]
+    # assertion fails if txt_img_draw.fontmode != txt_mask_draw.fontmode
+    # assert not np.any(mask_at_zero_alpha), "mask not zero at zero alpha in image"
+
     # Apply perspective warping to image
     txt_img = cv2.cvtColor(np.array(txt_img), cv2.COLOR_RGBA2BGRA)
     txt_mask = cv2.cvtColor(np.array(txt_mask), cv2.COLOR_RGB2BGR)
@@ -201,6 +211,29 @@ def _generate_horizontal_text(
     dst_size = np.amax(pts_dst, axis=0)
     txt_img = cv2.warpPerspective(txt_img, h, (dst_size[0], dst_size[1]))
     txt_mask = cv2.warpPerspective(txt_mask, h, (dst_size[0], dst_size[1]))
+
+    # Add erosion to mask
+    def random_erosion(img, erode_quant):
+        random_texture = np.random.normal(100, 40, size=img.shape[:-1]).astype("uint8")
+        for _ in range(1, rnd.randint(1, 10)):
+            random_texture = cv2.GaussianBlur(random_texture, (5, 5), 0)
+        random_texture[img[:, :, -1] == 0] = 0
+        # Create a kernel for erosion
+        # kernel = np.ones((kernel_size, kernel_size), np.uint8)
+        # Randomly choose the number of iterations
+        # iterations = np.random.randint(min_iterations, max_iterations + 1)
+        # Perform erosion
+        # img[:,:,-1] = cv2.erode(img[:,:,-1], kernel, iterations=iterations)
+        # ForkedPdb().set_trace()
+        binarize_threshold = np.quantile(
+            random_texture[random_texture != 0], rnd.uniform(0.0, erode_quant)
+        )
+        random_texture[random_texture < binarize_threshold] = 0
+        random_texture[random_texture >= binarize_threshold] = 255
+        img[:, :, -1] = random_texture
+        return img
+
+    txt_img = random_erosion(txt_img, erode_quant=erode_quant)
     txt_img = Image.fromarray(cv2.cvtColor(txt_img, cv2.COLOR_BGRA2RGBA))
     txt_mask = Image.fromarray(cv2.cvtColor(txt_mask, cv2.COLOR_BGR2RGB))
 

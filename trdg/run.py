@@ -360,6 +360,14 @@ def parse_arguments():
         default="#282828",
     )
     parser.add_argument(
+        "-erq",
+        "--erode_quant",
+        type=float,
+        nargs="?",
+        help="Define the quantile of non-blank text pixls will be eroded",
+        default=0.0,
+    )
+    parser.add_argument(
         "-rst",
         "--random_stroke",
         action="store_true",
@@ -517,6 +525,7 @@ def main():
                 [args.image_dir] * string_count,
                 [args.stroke_width] * string_count,
                 [args.stroke_fill] * string_count,
+                [args.erode_quant] * string_count,
                 [args.random_stroke] * string_count,
                 [args.image_mode] * string_count,
                 [args.output_bboxes] * string_count,

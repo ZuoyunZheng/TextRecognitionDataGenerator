@@ -55,6 +55,7 @@ class FakeTextDataGenerator(object):
         image_dir: str,
         stroke_width: int = 0,
         stroke_fill: str = "#282828",
+        erode_quant: float = 0.2,
         random_stroke: bool = True,
         image_mode: str = "RGB",
         output_bboxes: int = 0,
@@ -83,7 +84,11 @@ class FakeTextDataGenerator(object):
         # Create picture of text #
         ##########################
         if random_stroke:
-            stroke_width = rnd.randint(0, stroke_width)
+            stroke_width = rnd.choices(
+                range(stroke_width + 1),
+                weights=[stroke_width * 5] + [1] * stroke_width,
+                k=1,
+            )[0]
         if is_handwritten:
             if orientation == 1:
                 raise ValueError("Vertical handwritten text is unavailable")
@@ -103,6 +108,7 @@ class FakeTextDataGenerator(object):
                     word_split,
                     stroke_width,
                     stroke_fill,
+                    erode_quant,
                 )
                 if np.any(np.array(image)[:, :, :-1]):
                     break
@@ -215,7 +221,7 @@ class FakeTextDataGenerator(object):
             import cv2
 
             image_cv2 = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-            image_cv2 = cv2.GaussianBlur(image_cv2, (3, 3), 0)
+            image_cv2 = cv2.GaussianBlur(image_cv2, (5, 5), 0)
             image_cv2 = cv2.cvtColor(image_cv2, cv2.COLOR_RGB2GRAY)
             image_cv2 = cv2.Laplacian(image_cv2, cv2.CV_16S, ksize=3)
             return np.mean(image_cv2.std())
