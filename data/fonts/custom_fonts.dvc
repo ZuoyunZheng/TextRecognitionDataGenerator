@@ -1,0 +1,6 @@
+outs:
+- md5: 1b337a3c0be6e3357f1118008c8aff71.dir
+  size: 1847602326
+  nfiles: 4860
+  hash: md5
+  path: custom_fonts

@@ -1,0 +1,6 @@
+outs:
+- md5: 34d39371fbd8f971cbba81c7ceb64f5b.dir
+  size: 1015940396
+  nfiles: 5001
+  hash: md5
+  path: lvis_v1_val
